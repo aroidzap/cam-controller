@@ -4,5 +4,5 @@ build/
 *.build/
 dist/
 *.dist/
-model/
+models/
 *.spec

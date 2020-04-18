@@ -1,3 +1,9 @@
+# Run
+- `pip install -r requirements.txt`
+- `python cam_controller.py`
+- open **Chrome** and type into url bar: `chrome://dino`
+- enjoy !!!
+
 # Requirements
 ```
 pip install numpy
@@ -11,10 +17,5 @@ pip install requests
 pip install pyinstaller
 pip install --upgrade setuptools<45.0.0
 
-pyinstaller --clean --onefile --noconsole --icon=app.ico --name CamController cam_controller.py
+pyinstaller --clean --onedir --noconsole --icon=app.ico --name CamController cam_controller.py
 ```
-
-# Run
-- `python cam_controller.py`
-- open **Chrome** and type into url bar: `chrome://dino`
-- enjoy !!!

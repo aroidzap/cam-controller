@@ -5,6 +5,16 @@ import keyboard
 import requests
 
 class Compute():
+    def _show_text(self, text):
+        font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.8, 1
+        gui_img = np.zeros((240, 320, 3), np.uint8)
+        txt_size = cv2.getTextSize(text, font, size, thickness)[0]
+        origin = np.array([(gui_img.shape[1] - txt_size[0]) / 2, (gui_img.shape[0] + txt_size[1]) / 2])
+        cv2.putText(gui_img, text, tuple(origin.astype(int)), font, size, [255, 255, 255], thickness, cv2.LINE_AA)
+        cv2.resizeWindow(self.WINDOW_NAME, gui_img.shape[:2][::-1])
+        cv2.imshow(self.WINDOW_NAME, gui_img)
+        cv2.waitKey(1)
+
     def _load_model(self):
         # directory
         if not os.path.exists("models"):
@@ -18,6 +28,7 @@ class Compute():
         for file_url in [prototxt, caffemodel]:
             if not os.path.exists(file_url[0]):
                 with open(file_url[0], 'wb') as file:
+                    self._show_text('Downloading data...')
                     print("Downloading '{}' ...".format(file_url[1]))
                     file.write(requests.get(file_url[1], allow_redirects=True).content)
                     print("Done.")
@@ -46,8 +57,6 @@ class Compute():
             'U' : np.array([[(np.eye(2)[::-1,:] * [1, -1]) @ pt for pt in self.ARROW_PTS[0]]]), 
             'D' : np.array([[(np.eye(2)[::-1,:] * [-1, 1]) @ pt for pt in self.ARROW_PTS[0]]])
         }
-
-        self.model = self._load_model()
         
         self.tracker = None
         self.tracking_stage = False
@@ -63,6 +72,10 @@ class Compute():
 
         cv2.namedWindow(self.WINDOW_NAME, flags=cv2.WINDOW_NORMAL)
         cv2.moveWindow(self.WINDOW_NAME, 0, 0)
+
+        self.model = self._load_model()
+
+        self._show_text('Loading...')
 
     def __del__(self):
         cv2.destroyAllWindows()
