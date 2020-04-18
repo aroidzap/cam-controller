@@ -80,6 +80,16 @@ class Compute():
     def __del__(self):
         cv2.destroyAllWindows()
 
+    def reset(self):
+        self.tracker = None
+        self.tracking_stage = False
+        self.bbox = None
+        self.bbox_ok_cnt = 0
+        self.last_static_position = None
+        self.position = None
+        self.frame_size = None
+        self.release_keys()
+
     def compute(self, frame):
         if self.enable:
             if self.tracking_stage:
@@ -140,14 +150,7 @@ class Compute():
                 self.position = np.array([(self.bbox[0] + self.bbox[2]) / 2, (self.bbox[1] + self.bbox[3]) / 2])
                 self.frame_size = np.array(frame.shape[:2])[::-1]
         else:
-            self.tracker = None
-            self.tracking_stage = False
-            self.bbox = None
-            self.bbox_ok_cnt = 0
-            self.last_static_position = None
-            self.position = None
-            self.frame_size = None
-            self.release_keys()
+            self.reset()
 
     def draw_gui(self, frame, size = 0.5):
         gui_frame = frame.copy()
@@ -193,7 +196,10 @@ class Compute():
         
         cv2.resizeWindow(self.WINDOW_NAME, *gui_frame.shape[:2][::-1])
         cv2.imshow(self.WINDOW_NAME, gui_frame)
-        run = cv2.waitKey(1) != 27
+        key = cv2.waitKey(1)
+        if key == 32:
+            self.reset()
+        run = key != 27
         run = run and cv2.getWindowProperty(self.WINDOW_NAME, 0) >= 0
         return run
 
