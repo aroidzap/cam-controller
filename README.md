@@ -1,3 +1,6 @@
+# About
+- Camera Controller is head tracking controller, which simulates arrow key presses
+
 # Run
 - `pip install -r requirements.txt`
 - `python cam_controller.py`
