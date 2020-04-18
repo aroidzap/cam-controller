@@ -7,12 +7,12 @@ import requests
 class Compute():
     def _load_model(self):
         # directory
-        if not os.path.exists("model"):
-            os.makedirs("model")
+        if not os.path.exists("models"):
+            os.makedirs("models")
         # model
-        prototxt = ["model/face_detector.prototxt", 
+        prototxt = ["models/face_detector.prototxt", 
             "https://github.com/opencv/opencv/raw/master/samples/dnn/face_detector/deploy.prototxt"]
-        caffemodel = ["model/face_detector.caffemodel", 
+        caffemodel = ["models/face_detector.caffemodel", 
             "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180205_fp16/res10_300x300_ssd_iter_140000_fp16.caffemodel"]
         # download
         for file_url in [prototxt, caffemodel]:
@@ -27,6 +27,8 @@ class Compute():
     def __init__(self):
         self.BBOX_OK_THRESHOLD = 30
 
+        self.WINDOW_NAME = "Camera Controller"
+
         self.STATIC_POSITION_VELOCITY = 15
         self.ZONE_SIZE = 30
         self.DEAD_ZONE = 15
@@ -38,6 +40,12 @@ class Compute():
 
         self.ARROW_PTS = np.array([[[-3, 0], [-1, 2], 
             [-1, 1], [3, 1], [3, -1], [-1, -1], [-1, -2]]]) / 3
+        self.ARROW_PTS = {
+            'L' : np.array([[-np.eye(2) @ pt for pt in self.ARROW_PTS[0]]]), 
+            'R' : np.array([[np.eye(2) @ pt for pt in self.ARROW_PTS[0]]]), 
+            'U' : np.array([[(np.eye(2)[::-1,:] * [1, -1]) @ pt for pt in self.ARROW_PTS[0]]]), 
+            'D' : np.array([[(np.eye(2)[::-1,:] * [-1, 1]) @ pt for pt in self.ARROW_PTS[0]]])
+        }
 
         self.model = self._load_model()
         
@@ -53,8 +61,11 @@ class Compute():
 
         self.pressed_keys = []
 
-        cv2.namedWindow("Frame", flags=cv2.WINDOW_GUI_NORMAL)
-        cv2.moveWindow("Frame", 0, 0)
+        cv2.namedWindow(self.WINDOW_NAME, flags=cv2.WINDOW_NORMAL)
+        cv2.moveWindow(self.WINDOW_NAME, 0, 0)
+
+    def __del__(self):
+        cv2.destroyAllWindows()
 
     def compute(self, frame):
         if self.enable:
@@ -125,7 +136,7 @@ class Compute():
             self.frame_size = None
             self.release_keys()
 
-    def draw_gui(self, frame, size = 1):
+    def draw_gui(self, frame, size = 0.5):
         gui_frame = frame.copy()
         if self.bbox is not None:
             bbox_center = np.array([
@@ -144,22 +155,18 @@ class Compute():
                 cv2.circle(gui_frame, tuple(bbox_center.astype(int)), int(bbox_circle_radius), [128, 128, 128], -1, cv2.LINE_AA)
                 cv2.ellipse(gui_frame, tuple(bbox_center.astype(int)), (int(bbox_circle_radius), int(bbox_circle_radius)), 
                     270, 0, -360 * bbox_progress, [255, 64, 64], 7, cv2.LINE_AA)
-            # arrows
-            transformed_arrow = None
-            if self.KEY_RIGHT in self.pressed_keys:
-                transform = np.eye(2)
-                transformed_arrow = np.array([[transform @ pt for pt in self.ARROW_PTS[0]]])
-            elif self.KEY_LEFT in self.pressed_keys:
-                transform = -np.eye(2)
-                transformed_arrow = np.array([[transform @ pt for pt in self.ARROW_PTS[0]]])
+            
+            arrow = None
+            if self.KEY_LEFT in self.pressed_keys:
+                arrow = self.ARROW_PTS['L']
+            elif self.KEY_RIGHT in self.pressed_keys:
+                arrow = self.ARROW_PTS['R']
             elif self.KEY_UP in self.pressed_keys:
-                transform = np.eye(2)[::-1,:] * [1, -1]
-                transformed_arrow = np.array([[transform @ pt for pt in self.ARROW_PTS[0]]])
+                arrow = self.ARROW_PTS['U']
             elif self.KEY_DOWN in self.pressed_keys:
-                transform = np.eye(2)[::-1,:] * [-1, 1]
-                transformed_arrow = np.array([[transform @ pt for pt in self.ARROW_PTS[0]]])
-            if transformed_arrow is not None:
-                cv2.fillPoly(gui_frame, (bbox_circle_radius * 0.8 * transformed_arrow + bbox_center).astype(np.int32), 
+                arrow = self.ARROW_PTS['D']
+            if arrow is not None:
+                cv2.fillPoly(gui_frame, (bbox_circle_radius * 0.8 * arrow + bbox_center).astype(np.int32), 
                     [255, 255, 255], cv2.LINE_AA)
 
         gui_frame = (0.5 * gui_frame + 0.5 * frame).astype(np.uint8)
@@ -170,8 +177,12 @@ class Compute():
                 cv2.circle(gui_frame, tuple(self.position.astype(int)), int(self.ZONE_SIZE), [255, 255, 255], 1, cv2.LINE_AA)
                 cv2.circle(gui_frame, tuple(self.position.astype(int)), int(self.ZONE_SIZE + self.DEAD_ZONE), [255, 255, 255], 1, cv2.LINE_AA)
         gui_frame = cv2.resize(gui_frame, (0,0), fx=size, fy=size, interpolation=cv2.INTER_AREA)[:,::-1]
-        cv2.imshow("Frame", gui_frame)
-        cv2.waitKey(1)
+        
+        cv2.resizeWindow(self.WINDOW_NAME, *gui_frame.shape[:2][::-1])
+        cv2.imshow(self.WINDOW_NAME, gui_frame)
+        run = cv2.waitKey(1) != 27
+        run = run and cv2.getWindowProperty(self.WINDOW_NAME, 0) >= 0
+        return run
 
     def release_keys(self):
         for key in self.pressed_keys:
@@ -224,7 +235,7 @@ class Compute():
 
 class Camera():
     def __init__(self, width = 640, height = 480, exposure = None, gain = None):
-        self.cam = cv2.VideoCapture(0)
+        self.cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         if exposure is not None:
@@ -251,6 +262,7 @@ if __name__ == "__main__":
             frame = cam.frame()
             compute.compute(frame)
             compute.evaluate_keypress()
-            compute.draw_gui(frame)
+            if not compute.draw_gui(frame):
+                break
         except KeyboardInterrupt:
             break

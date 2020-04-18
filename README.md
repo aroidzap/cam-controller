@@ -1,9 +1,17 @@
 # Requirements
 ```
 pip install numpy
-conda install -c conda-forge opencv
+pip install opencv-contrib-python
 pip install keyboard
 pip install requests
+```
+
+# Deploy
+```
+pip install pyinstaller
+pip install --upgrade setuptools<45.0.0
+
+pyinstaller --clean --onefile --noconsole --icon=app.ico --name CamController cam_controller.py
 ```
 
 # Run
