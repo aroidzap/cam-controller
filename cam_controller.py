@@ -1,4 +1,5 @@
 import os
+import argparse
 import cv2
 import numpy as np
 import keyboard
@@ -38,7 +39,7 @@ class Compute():
         # load
         return cv2.dnn.readNetFromCaffe(prototxt[0], caffemodel[0])
 
-    def __init__(self):
+    def __init__(self, keys = ['up', 'left', 'down', 'right']):
         self.BBOX_OK_THRESHOLD = 30
 
         self.WINDOW_NAME = "Camera Controller"
@@ -47,10 +48,10 @@ class Compute():
         self.ZONE_SIZE = 30
         self.DEAD_ZONE = 15
 
-        self.KEY_LEFT = 'left'
-        self.KEY_RIGHT = 'right'
-        self.KEY_UP = 'up'
-        self.KEY_DOWN = 'down'
+        self.KEY_LEFT = keys[1]
+        self.KEY_RIGHT = keys[3]
+        self.KEY_UP = keys[0]
+        self.KEY_DOWN = keys[2]
 
         self.ARROW_PTS = np.array([[[-3, 0], [-1, 2], 
             [-1, 1], [3, 1], [3, -1], [-1, -1], [-1, -2]]]) / 3
@@ -288,8 +289,20 @@ class Camera():
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(description='Camera Controller - head tracking controller for playing simple games')
+    parser.add_argument('--wasd', action='store_true', help='enable WASD keys mode (default are arrows)')
+    parser.add_argument('--ijkl', action='store_true', help='enable IJKL keys mode (default are arrows)')
+    args = parser.parse_args()
+
+    if args.wasd:
+        UP_LEFT_DOWN_RIGHT = ['w', 'a', 's', 'd']
+    elif args.wasd:
+        UP_LEFT_DOWN_RIGHT = ['i', 'j', 'k', 'l']
+    else:
+        UP_LEFT_DOWN_RIGHT = ['up', 'left', 'down', 'right']
+
     cam = Camera(640, 480, exposure = None, gain = None)
-    compute = Compute()
+    compute = Compute(keys = UP_LEFT_DOWN_RIGHT)
     
     while True:
         try:
