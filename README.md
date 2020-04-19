@@ -33,6 +33,12 @@ pip install pywin32
 ```
 
 ## Deploy
+### Using cx_Freeze
+```
+pip install cx_Freeze
+python deploy.py bdist_msi
+```
+### Using PyInstaller
 ```
 pip install pyinstaller
 pip install --upgrade setuptools<45.0.0
