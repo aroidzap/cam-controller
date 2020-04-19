@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import keyboard
 import requests
+import simpleaudio
 
 class Compute():
     def _show_text(self, text):
@@ -15,23 +16,25 @@ class Compute():
         cv2.imshow(self.WINDOW_NAME, gui_img)
         cv2.waitKey(1)
 
+    def _download_file(self, file_url):
+        if not os.path.exists(file_url[0]):
+            if not os.path.exists(os.path.dirname(file_url[0])):
+                os.makedirs(os.path.dirname(file_url[0]))
+            with open(file_url[0], 'wb') as file:
+                self._show_text('Downloading data...')
+                print("Downloading '{}' ...".format(file_url[1]))
+                file.write(requests.get(file_url[1], allow_redirects=True).content)
+                print("Done.")
+
     def _load_model(self):
-        # directory
-        if not os.path.exists("models"):
-            os.makedirs("models")
         # model
-        prototxt = ["models/face_detector.prototxt", 
+        prototxt = ["data/face_detector.prototxt", 
             "https://github.com/opencv/opencv/raw/master/samples/dnn/face_detector/deploy.prototxt"]
-        caffemodel = ["models/face_detector.caffemodel", 
+        caffemodel = ["data/face_detector.caffemodel", 
             "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180205_fp16/res10_300x300_ssd_iter_140000_fp16.caffemodel"]
         # download
         for file_url in [prototxt, caffemodel]:
-            if not os.path.exists(file_url[0]):
-                with open(file_url[0], 'wb') as file:
-                    self._show_text('Downloading data...')
-                    print("Downloading '{}' ...".format(file_url[1]))
-                    file.write(requests.get(file_url[1], allow_redirects=True).content)
-                    print("Done.")
+            self._download_file(file_url)
         # load
         return cv2.dnn.readNetFromCaffe(prototxt[0], caffemodel[0])
 
@@ -75,6 +78,15 @@ class Compute():
 
         self.model = self._load_model()
 
+        try:
+            self.OK_SOUND = simpleaudio.WaveObject.from_wave_file("data/ok.wav")
+        except FileNotFoundError:
+            self.OK_SOUND = None
+        try:
+            self.FAIL_SOUND = simpleaudio.WaveObject.from_wave_file("data/fail.wav")
+        except FileNotFoundError:
+            self.FAIL_SOUND = None
+
         self._show_text('Loading...')
 
     def __del__(self):
@@ -115,8 +127,9 @@ class Compute():
                 if self.bbox_ok_cnt > 0:
                     self.bbox_ok_cnt = 0
                 if self.bbox_ok_cnt < -0.5 * self.BBOX_OK_THRESHOLD:
-                    self.bbox_ok_cnt = 0
-                    self.tracking_stage = False
+                    self.reset()
+                    if self.FAIL_SOUND is not None:
+                        self.FAIL_SOUND.play()
 
             else:
                 if self.tracker is not None:
@@ -144,6 +157,8 @@ class Compute():
                 if self.bbox_ok_cnt > self.BBOX_OK_THRESHOLD:
                     self.bbox_ok_cnt = 0
                     self.tracking_stage = True
+                    if self.OK_SOUND is not None:
+                        self.OK_SOUND.play()
 
             # update position
             if self.bbox is not None:

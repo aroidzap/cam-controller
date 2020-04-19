@@ -13,6 +13,7 @@ pip install numpy
 pip install opencv-contrib-python
 pip install keyboard
 pip install requests
+pip install simpleaudio
 ```
 
 # Deploy
@@ -20,5 +21,5 @@ pip install requests
 pip install pyinstaller
 pip install --upgrade setuptools<45.0.0
 
-pyinstaller --clean --onedir --noconsole --icon=app.ico --name CamController cam_controller.py
+pyinstaller --clean --onedir --noconsole --add-data="data/*;data" --icon=app.ico --name CamController cam_controller.py
 ```
