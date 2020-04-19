@@ -3,6 +3,7 @@
 
 # Run
 - `pip install -r requirements.txt`
+- `pip install -r requirements-optional.txt`
 - `python cam_controller.py`
 - open **Chrome** and type into url bar: `chrome://dino`
 - enjoy !!!
@@ -14,6 +15,10 @@ pip install opencv-contrib-python
 pip install keyboard
 pip install requests
 pip install simpleaudio
+```
+optional:
+```
+pip install pywin32
 ```
 
 # Deploy

@@ -6,6 +6,18 @@ import keyboard
 import requests
 import simpleaudio
 
+try:
+    import win32gui
+    import win32con
+    
+    def makeWindowAlwaysOnTop(window_name):
+        hwnd = win32gui.FindWindow(None, window_name)
+        win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
+
+except ImportError:
+    def makeWindowAlwaysOnTop(window_name):
+        pass
+
 class Compute():
     def _show_text(self, text):
         font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.8, 1
@@ -39,7 +51,7 @@ class Compute():
         # load
         return cv2.dnn.readNetFromCaffe(prototxt[0], caffemodel[0])
 
-    def __init__(self, keys = ['up', 'left', 'down', 'right']):
+    def __init__(self, keys = ['up', 'left', 'down', 'right'], always_on_top = True):
         self.BBOX_OK_THRESHOLD = 30
 
         self.WINDOW_NAME = "Camera Controller"
@@ -76,6 +88,8 @@ class Compute():
 
         cv2.namedWindow(self.WINDOW_NAME, flags=cv2.WINDOW_NORMAL)
         cv2.moveWindow(self.WINDOW_NAME, 0, 0)
+        if always_on_top:
+            makeWindowAlwaysOnTop(self.WINDOW_NAME)
 
         self.model = self._load_model()
 
@@ -290,9 +304,12 @@ class Camera():
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Camera Controller - head tracking controller for playing simple games')
+    parser.add_argument('--no-top', action='store_true', help='disable always on top mode')
     parser.add_argument('--wasd', action='store_true', help='enable WASD keys mode (default are arrows)')
     parser.add_argument('--ijkl', action='store_true', help='enable IJKL keys mode (default are arrows)')
     args = parser.parse_args()
+
+    ALWAYS_ON_TOP = not args.no_top
 
     if args.wasd:
         UP_LEFT_DOWN_RIGHT = ['w', 'a', 's', 'd']
@@ -302,7 +319,7 @@ if __name__ == "__main__":
         UP_LEFT_DOWN_RIGHT = ['up', 'left', 'down', 'right']
 
     cam = Camera(640, 480, exposure = None, gain = None)
-    compute = Compute(keys = UP_LEFT_DOWN_RIGHT)
+    compute = Compute(keys = UP_LEFT_DOWN_RIGHT, always_on_top = ALWAYS_ON_TOP)
     
     while True:
         try:
