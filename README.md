@@ -8,6 +8,8 @@
 - open **Chrome** and type into url bar: `chrome://dino`
 - enjoy !!!
 
+* press spacebar to reset tracking
+
 # Requirements
 ```
 pip install numpy
@@ -25,6 +27,5 @@ pip install pywin32
 ```
 pip install pyinstaller
 pip install --upgrade setuptools<45.0.0
-
 pyinstaller --clean --onedir --noconsole --add-data="data/*;data" --icon=app.ico --name CamController cam_controller.py
 ```
