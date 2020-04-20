@@ -1,11 +1,8 @@
 import os
-if os.name == "posix":
-    os.environ["QT_X11_NO_MITSHM"] = "1"
-
 import argparse
 import cv2
 import numpy as np
-import keyboard
+import pyautogui
 import requests
 import simpleaudio
 
@@ -241,14 +238,14 @@ class Compute():
 
     def release_keys(self):
         for key in self.pressed_keys:
-            keyboard.release(key)
+            pyautogui.keyUp(key)
             print("RELEASE: {}".format(key))
         self.pressed_keys = []
     
     def press_key(self, key):
         self.pressed_keys.append(key)
         print("PRESS: {}".format(key))
-        keyboard.press(key)
+        pyautogui.keyDown(key)
 
     def evaluate_keypress(self):
         if self.tracking_stage and self.position is not None:
