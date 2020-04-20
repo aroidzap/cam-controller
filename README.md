@@ -9,9 +9,12 @@
 -----------------------------------------
 *app is using face recognition model from [https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector)*
 
-## Run
+## Install Dependencies
+- `sudo apt-get install python3-dev libasound2-dev -y` *(for Linux users)*
 - `pip install -r requirements.txt`
 - `pip install -r requirements-optional.txt` *(for Windows users)*
+
+## Run
 - `python cam_controller.py`
 - open [![chrome-icon](https://www.google.com/chrome/static/images/favicons/favicon-16x16.png) **Chrome**](https://www.google.com/chrome/) and type into url bar: `chrome://dino`
 - 🕹️ **enjoy** and **hit the highest score !!!** 🦖
@@ -23,7 +26,7 @@
 ```
 pip install numpy
 pip install opencv-contrib-python
-pip install keyboard
+pip install pyautogui
 pip install requests
 pip install simpleaudio
 ```
