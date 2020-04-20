@@ -2,7 +2,7 @@ __author__      = "Tomáš Pazdiora"
 __description__ = "Head Tracking Controller"
 __app_name__    = "CamController"
 __full_name__   = "Camera Controller"
-__version__     = "1.1.0"
+__version__     = "1.1.1"
 __app_main__    = "cam_controller.py"
 __app_icon__    = "app.ico"
 __app_data__    = ["data", "README.md", "LICENSE"]
@@ -42,7 +42,7 @@ class PyInstallerExecutable(Executable):
             ext = ".app"
 
         with open('build/launcher.py', 'w') as file:
-            file.write('import subprocess; subprocess.call(["{}{}"], shell=True)'.format(targetName, ext))
+            file.write('import sys, subprocess; subprocess.call(["{}{}", *sys.argv[1:]], shell=True)'.format(targetName, ext))
 
         if base is None:
             base = "Win32GUI" if platform.system().lower().startswith('windows') else None

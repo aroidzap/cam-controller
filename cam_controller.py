@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import cv2
 import numpy as np
@@ -356,10 +357,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Camera Controller - head tracking controller for playing simple games')
     parser.add_argument('--no-top', action='store_true', help='disable always on top mode')
-    parser.add_argument('--tracker-downscale', type=float, default=4.0, help='set image downscaling for tracking stage')
+    parser.add_argument('--tracker-downscale', metavar='SCALE', type=float, default=4.0, 
+        help='set image downscaling for tracking stage (default is 4.0)')
     parser.add_argument('--wasd', action='store_true', help='enable WASD keys mode (default are arrows)')
     parser.add_argument('--ijkl', action='store_true', help='enable IJKL keys mode (default are arrows)')
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[1:])
 
     ALWAYS_ON_TOP = not args.no_top
     TRACKER_DOWNSCALE = args.tracker_downscale
