@@ -1,4 +1,4 @@
-# Camera Controller 
+# [Camera Controller](https://github.com/aroidzap/cam-controller)
 - 📷 webcamera 🤨 head tracking ⌨️ keyboard controller
 - control your keyboard **arrow** keys with your 🕺 movements
 - *press **spacebar** to reset tracking*
@@ -22,28 +22,9 @@
 -----------------------------------------
 *you can **reset** `chrome://dino` **highest-score** by **clikcing it twice***
 
-## Requirements
-```
-pip install numpy
-pip install opencv-contrib-python
-pip install pyautogui
-pip install requests
-pip install simpleaudio
-```
-optional: *(for Windows users)*
-```
-pip install pywin32
-```
-
 ## Deploy
-### Using cx_Freeze
-```
-pip install cx_Freeze
-python deploy.py bdist_msi
-```
-### Using PyInstaller
-```
-pip install pyinstaller
-pip install --upgrade setuptools<45.0.0
-pyinstaller --clean --onedir --noconsole --add-data="data/*;data" --icon=app.ico --name CamController cam_controller.py
+- `pip install -r requirements-deploy.txt`
+- `python deploy.py bdist_msi` *(for Windows users)*
+- `python deploy.py bdist_dmg` *(for Mac users)*
+- `python deploy.py bdist_rpm` *(for Linux users)*
 ```
