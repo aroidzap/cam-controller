@@ -298,9 +298,10 @@ class Compute():
                             self.press_key(self.KEY_DOWN)
 
 class Camera():
-    def __init__(self, device_id = 0, width = 640, height = 480, exposure = None, gain = None):
+    def __init__(self, device_id = 0, width = 640, height = 480, exposure = None, gain = None, buffer_frames = False):
         self.width = width
         self.height = height
+        self.buffer_frames = buffer_frames
         if os.name == "nt":
             self.cam = cv2.VideoCapture(device_id, cv2.CAP_DSHOW)
         else:
@@ -309,7 +310,8 @@ class Camera():
             self.cam = None
 
         if self.cam is not None:
-            self.cam.set(cv2.CAP_PROP_BUFFERSIZE, 0)
+            if not self.buffer_frames:
+                self.cam.set(cv2.CAP_PROP_BUFFERSIZE, 0)
             self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
             self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
             if exposure is not None:
@@ -338,7 +340,7 @@ class Camera():
                 frame = np.minimum(255, (frame.astype(np.float32) * self._gain)).astype(np.uint8)
             if not frame_ok:
                 break
-            if not self._queue.empty():
+            if (not self.buffer_frames) and (not self._queue.empty()):
                 try:
                     self._queue.get_nowait()
                 except queue.Empty:
@@ -357,6 +359,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Camera Controller - head tracking controller for playing simple games')
     parser.add_argument('--no-top', action='store_true', help='disable always on top mode')
+    parser.add_argument('--buffer-frames', action='store_true', help='buffer all frames from camera for tracking')
     parser.add_argument('--tracker-downscale', metavar='SCALE', type=float, default=4.0, 
         help='set image downscaling for tracking stage (default is 4.0)')
     parser.add_argument('--wasd', action='store_true', help='enable WASD keys mode (default are arrows)')
@@ -365,6 +368,7 @@ if __name__ == "__main__":
 
     ALWAYS_ON_TOP = not args.no_top
     TRACKER_DOWNSCALE = args.tracker_downscale
+    BUFFER_FRAMES = args.buffer_frames
 
     if args.wasd:
         UP_LEFT_DOWN_RIGHT = ['w', 'a', 's', 'd']
@@ -373,7 +377,7 @@ if __name__ == "__main__":
     else:
         UP_LEFT_DOWN_RIGHT = ['up', 'left', 'down', 'right']
 
-    cam = Camera(device_id = 0, width = 640, height = 480, exposure = None, gain = None)
+    cam = Camera(device_id = 0, width = 640, height = 480, exposure = None, gain = None, buffer_frames = BUFFER_FRAMES)
     compute = Compute(keys = UP_LEFT_DOWN_RIGHT, always_on_top = ALWAYS_ON_TOP, tracker_downscale = TRACKER_DOWNSCALE)
     
     while True:
