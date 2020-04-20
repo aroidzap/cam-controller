@@ -1,4 +1,7 @@
 import os
+if os.name == "posix":
+    os.environ["QT_X11_NO_MITSHM"] = "1"
+
 import argparse
 import cv2
 import numpy as np
@@ -6,16 +9,19 @@ import keyboard
 import requests
 import simpleaudio
 
-try:
-    import win32gui
-    import win32con
-    
-    def makeWindowAlwaysOnTop(window_name):
-        hwnd = win32gui.FindWindow(None, window_name)
-        win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
+def makeWindowAlwaysOnTop(window_name):
+    pass
 
-except ImportError:
-    def makeWindowAlwaysOnTop(window_name):
+if os.name == "nt":
+    try:
+        import win32gui
+        import win32con
+        
+        def makeWindowAlwaysOnTop(window_name):
+            hwnd = win32gui.FindWindow(None, window_name)
+            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
+
+    except ImportError:
         pass
 
 class Compute():
@@ -283,8 +289,11 @@ class Compute():
                             self.press_key(self.KEY_DOWN)
 
 class Camera():
-    def __init__(self, width = 640, height = 480, exposure = None, gain = None):
-        self.cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    def __init__(self, device_id = 0, width = 640, height = 480, exposure = None, gain = None):
+        if os.name == "nt":
+            self.cam = cv2.VideoCapture(device_id, cv2.CAP_DSHOW)
+        else:
+            self.cam = cv2.VideoCapture(device_id)
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         if exposure is not None:
@@ -318,7 +327,7 @@ if __name__ == "__main__":
     else:
         UP_LEFT_DOWN_RIGHT = ['up', 'left', 'down', 'right']
 
-    cam = Camera(640, 480, exposure = None, gain = None)
+    cam = Camera(device_id = 0, width = 640, height = 480, exposure = None, gain = None)
     compute = Compute(keys = UP_LEFT_DOWN_RIGHT, always_on_top = ALWAYS_ON_TOP)
     
     while True:
