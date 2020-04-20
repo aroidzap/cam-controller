@@ -1,0 +1,4 @@
+setuptools<45.0.0
+pyinstaller>=3.6
+cx_Freeze>=6.1
+pip-licenses>=2.1.1
