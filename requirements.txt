@@ -1,5 +1,5 @@
 numpy>=1.17.0
 opencv-contrib-python>=4.1.0
-keyboard>=0.13.5
+pyautogui>=0.9.50
 requests>=2.23.0
 simpleaudio>=1.0.4

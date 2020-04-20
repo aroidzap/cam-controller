@@ -26,7 +26,7 @@
 ```
 pip install numpy
 pip install opencv-contrib-python
-pip install keyboard
+pip install pyautogui
 pip install requests
 pip install simpleaudio
 ```
