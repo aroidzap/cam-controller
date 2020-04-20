@@ -5,6 +5,7 @@
 - *run app with `--wasd` switch to controll **WASD** keys instead*
 - *run app with `--ijkl` switch to controll **IJKL** keys instead*
 - *run app with `--no-top` switch to suppress always on top behavior (for Windows users)*
+- *run app with `--tracker-downscale SCALE` switch to set tracking stage image downscaling*
 
 -----------------------------------------
 *app is using face recognition model from [https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector)*

@@ -5,6 +5,8 @@ import numpy as np
 import pyautogui
 import requests
 import simpleaudio
+import queue
+import threading
 
 def makeWindowAlwaysOnTop(window_name):
     pass
@@ -21,13 +23,17 @@ if os.name == "nt":
     except ImportError:
         pass
 
+def text_image(text, width, height, size = 1, color = [255, 255, 255]):
+    font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, size * 0.8, size * 1
+    img = np.zeros((height, width, 3), np.uint8)
+    txt_size = cv2.getTextSize(text, font, size, thickness)[0]
+    origin = np.array([(img.shape[1] - txt_size[0]) / 2, (img.shape[0] + txt_size[1]) / 2])
+    cv2.putText(img, text, tuple(origin.astype(int)), font, size, color, thickness, cv2.LINE_AA)
+    return img
+
 class Compute():
     def _show_text(self, text):
-        font, size, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.8, 1
-        gui_img = np.zeros((240, 320, 3), np.uint8)
-        txt_size = cv2.getTextSize(text, font, size, thickness)[0]
-        origin = np.array([(gui_img.shape[1] - txt_size[0]) / 2, (gui_img.shape[0] + txt_size[1]) / 2])
-        cv2.putText(gui_img, text, tuple(origin.astype(int)), font, size, [255, 255, 255], thickness, cv2.LINE_AA)
+        gui_img = text_image(text, 320, 240)
         cv2.resizeWindow(self.WINDOW_NAME, gui_img.shape[:2][::-1])
         cv2.imshow(self.WINDOW_NAME, gui_img)
         cv2.waitKey(1)
@@ -54,7 +60,7 @@ class Compute():
         # load
         return cv2.dnn.readNetFromCaffe(prototxt[0], caffemodel[0])
 
-    def __init__(self, keys = ['up', 'left', 'down', 'right'], always_on_top = True):
+    def __init__(self, keys = ['up', 'left', 'down', 'right'], always_on_top = True, tracker_downscale = 4.0):
         self.BBOX_OK_THRESHOLD = 30
 
         self.WINDOW_NAME = "Camera Controller"
@@ -62,6 +68,9 @@ class Compute():
         self.STATIC_POSITION_VELOCITY = 15
         self.ZONE_SIZE = 30
         self.DEAD_ZONE = 15
+
+        self.TRACKER_DOWNSCALE = tracker_downscale
+        self.TRACKER_DOWNSCALE_INTER = cv2.INTER_LINEAR
 
         self.KEY_LEFT = keys[1]
         self.KEY_RIGHT = keys[3]
@@ -123,20 +132,22 @@ class Compute():
     def compute(self, frame):
         if self.enable:
             if self.tracking_stage:
+                tracker_frame = cv2.resize(frame, (0, 0), fx = (1 / self.TRACKER_DOWNSCALE), 
+                    fy = (1 / self.TRACKER_DOWNSCALE), interpolation = self.TRACKER_DOWNSCALE_INTER)
                 if self.tracker is None:
                     if self.bbox is not None:
                         self.tracker = cv2.TrackerCSRT_create()
-                        tracker_bbox = self.bbox
+                        tracker_bbox = (self.bbox / self.TRACKER_DOWNSCALE).astype(int)
                         tracker_bbox[2:4] -= tracker_bbox[0:2]
                         tracker_bbox = tuple(tracker_bbox)
-                        self.tracker.init(frame, tracker_bbox)
+                        self.tracker.init(tracker_frame, tracker_bbox)
                         self.last_static_position = None
-            
-                tracker_ok, tracker_bbox = self.tracker.update(frame)
+
+                tracker_ok, tracker_bbox = self.tracker.update(tracker_frame)
                 tracker_bbox = np.array(tracker_bbox)
                 tracker_bbox[2:4] += tracker_bbox[0:2]
                 if tracker_ok:
-                    self.bbox = tracker_bbox.astype(int)
+                    self.bbox = (tracker_bbox * self.TRACKER_DOWNSCALE).astype(int)
                     self.bbox_ok_cnt += 1
                 else:
                     self.bbox = None
@@ -287,35 +298,71 @@ class Compute():
 
 class Camera():
     def __init__(self, device_id = 0, width = 640, height = 480, exposure = None, gain = None):
+        self.width = width
+        self.height = height
         if os.name == "nt":
             self.cam = cv2.VideoCapture(device_id, cv2.CAP_DSHOW)
         else:
             self.cam = cv2.VideoCapture(device_id)
-        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        if exposure is not None:
-            self.cam.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-            self.cam.set(cv2.CAP_PROP_EXPOSURE, exposure)
-        self._gain = gain
+        if not self.cam.isOpened():
+            self.cam = None
+
+        if self.cam is not None:
+            self.cam.set(cv2.CAP_PROP_BUFFERSIZE, 0)
+            self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            if exposure is not None:
+                self.cam.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+                self.cam.set(cv2.CAP_PROP_EXPOSURE, exposure)
+            self._gain = gain
+
+            self._run_camera = True
+            self._queue = queue.Queue()
+            self._thread = threading.Thread(target=self._camera_reader)
+            self._thread.start()
+
+    def stop(self):
+        self._run_camera = False
 
     def __del__(self):
-        self.cam.release()
+        if self.cam is not None:
+            self.stop()
+            self._thread.join()
+            self.cam.release()
+
+    def _camera_reader(self):
+        while self._run_camera:
+            frame_ok, frame = self.cam.read()
+            if self._gain is not None:
+                frame = np.minimum(255, (frame.astype(np.float32) * self._gain)).astype(np.uint8)
+            if not frame_ok:
+                break
+            if not self._queue.empty():
+                try:
+                    self._queue.get_nowait()
+                except queue.Empty:
+                    pass
+            self._queue.put(frame)
 
     def frame(self):
-        _, img = self.cam.read()
-        if self._gain is not None:
-            img = np.minimum(255, (img.astype(np.float32) * self._gain)).astype(np.uint8)
-        return img
+        if self.cam is not None:
+            return self._queue.get()
+        else:
+            return text_image("!!! CAMERA ERROR !!!", self.width, self.height, 2, [0, 0, 255])[:,::-1]
+            
+
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Camera Controller - head tracking controller for playing simple games')
     parser.add_argument('--no-top', action='store_true', help='disable always on top mode')
+    parser.add_argument('--tracker-downscale', type=float, default=4.0, help='set image downscaling for tracking stage')
     parser.add_argument('--wasd', action='store_true', help='enable WASD keys mode (default are arrows)')
     parser.add_argument('--ijkl', action='store_true', help='enable IJKL keys mode (default are arrows)')
     args = parser.parse_args()
 
     ALWAYS_ON_TOP = not args.no_top
+    TRACKER_DOWNSCALE = args.tracker_downscale
 
     if args.wasd:
         UP_LEFT_DOWN_RIGHT = ['w', 'a', 's', 'd']
@@ -325,7 +372,7 @@ if __name__ == "__main__":
         UP_LEFT_DOWN_RIGHT = ['up', 'left', 'down', 'right']
 
     cam = Camera(device_id = 0, width = 640, height = 480, exposure = None, gain = None)
-    compute = Compute(keys = UP_LEFT_DOWN_RIGHT, always_on_top = ALWAYS_ON_TOP)
+    compute = Compute(keys = UP_LEFT_DOWN_RIGHT, always_on_top = ALWAYS_ON_TOP, tracker_downscale = TRACKER_DOWNSCALE)
     
     while True:
         try:
@@ -336,3 +383,5 @@ if __name__ == "__main__":
                 break
         except KeyboardInterrupt:
             break
+
+    cam.stop()
